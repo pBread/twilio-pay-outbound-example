@@ -28,6 +28,29 @@ exports.handler = async function wrapper(ctx, event, callback) {
 };
 
 async function onUserAnswer(ctx, event, callback) {
+  const fns = Runtime.getFunctions();
+  const conf = require(fns["shared/conf"].path);
+  const sync = require(fns["shared/sync"].path);
+
+  const customerPN = event.To;
+
+  sync.updateSession(customerPN, { status: "answered" });
+
+  const session = await sync.getSession(customerPN);
+
+  // a call leg to the conference that dials the dedicated Twilio Pay phone number
+  // Twilio Pay will be initiated in webhooks/incoming-call
+  await client.conferences(session.confName).participants.create({
+    from: session.reservedPN,
+    to: conf.getPayPhone(),
+  });
+
+  await sync.updateSession(customerPN, {
+    attempt: 1,
+    paymentStep: conf.paymentSteps[0],
+    errorType: "",
+  });
+
   callback(null, {});
 }
 

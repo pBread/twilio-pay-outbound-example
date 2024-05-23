@@ -12,6 +12,13 @@ module.exports = {
   getPhonePool,
   getReservationTTL: () => parseInt(RESERVATION_TTL),
   getSyncSvcSid: () => SYNC_SERVICE_SID,
+
+  paymentSteps: [
+    "payment-card-number",
+    "expiration-date",
+    "postal-code",
+    "security-code",
+  ],
 };
 
 function getPhonePool() {
