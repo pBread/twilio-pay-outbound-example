@@ -33,12 +33,12 @@ npm run quick-deploy
 
 ## Node Version Manager (NVM)
 
-This project requires node version 18. NVM is a standard package to manage node versions.
+This project requires node version 18. [NVM](https://github.com/nvm-sh/nvm) is a standard package to manage node versions.
 
-[NVM Github](https://github.com/nvm-sh/nvm)
-
-[Install with Homebrew](https://formulae.brew.sh/formula/nvm)
+If you don't have NVM, you can easily [install with Homebrew](https://formulae.brew.sh/formula/nvm).
 
 ```bash
 brew install nvm
 ```
+
+NVM provides alternative installation instructions, see [Install & Update Scripts](https://github.com/nvm-sh/nvm?tab=readme-ov-file#installing-and-updating)
