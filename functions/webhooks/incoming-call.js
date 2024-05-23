@@ -1,3 +1,9 @@
+// This webhook manages incoming calls for the dedicated Twilio Pay phone number.
+// Essentially, a Twilio conference is established and, once the customer answers,
+// that conference calls a phone number connected to this webhook.
+
+// This webhook is responsible for starting Twilio Pay.
+
 exports.handler = async function wrapper(ctx, event, callback) {
   try {
     return handler(ctx, event, callback);
