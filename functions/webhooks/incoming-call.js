@@ -38,7 +38,7 @@ async function handler(ctx, event, callback) {
     chargeAmount: `${session.amount}`,
     method: "charge",
     language: promptConf.language ?? "en-US",
-    paymentConnector: "GenericPay_Connector",
+    paymentConnector: conf.getPayConnectorName() || "default",
     statusCallback: `${conf.getHostname()}/webhooks/pay-status-callback${qStr}`,
   });
 

@@ -1,13 +1,15 @@
 const {
   DOMAIN_NAME,
-  SYNC_SERVICE_SID,
+  PAY_CONNECTOR_NAME,
   RESERVATION_TTL,
+  SYNC_SERVICE_SID,
   TWILIO_PAY_PHONE,
   TWILIO_PHONE_POOL,
 } = process.env;
 
 module.exports = {
   getHostname: () => `https://${DOMAIN_NAME}`,
+  getPayConnectorName: () => PAY_CONNECTOR_NAME,
   getPayPhone: () => TWILIO_PAY_PHONE,
   getPhonePool,
   getReservationTTL: () => parseInt(RESERVATION_TTL),

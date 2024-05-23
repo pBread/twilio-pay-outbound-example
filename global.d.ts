@@ -3,6 +3,7 @@ declare namespace NodeJS {
     ACCOUNT_SID: string;
     AUTH_TOKEN: string;
     DOMAIN_NAME: string;
+    PAY_CONNECTOR_NAME: string;
     RESERVATION_TTL: string;
     SYNC_SERVICE_SID: string;
     TWILIO_API_KEY: string;
