@@ -1,4 +1,14 @@
-module.exports = { printTable };
+module.exports = { evalYesNo, printTable };
+
+function evalYesNo(answer) {
+  if (!answer) return;
+  answer = answer.trim().toLowerCase();
+
+  if (answer === "y" || answer === "yes") return true;
+  if (answer === "n" || answer === "no") return false;
+
+  throw Error("Invalid Reponse");
+}
 
 function printTable(data) {
   const colWidths = [];

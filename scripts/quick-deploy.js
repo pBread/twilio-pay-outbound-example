@@ -80,7 +80,7 @@ async function manageApiKey() {
     `You have not provided an API Key. Would you like to create an API key now? (y or n, default = y)`
   );
 
-  const doCreateApiKey = evalYesNo(answer);
+  const doCreateApiKey = util.evalYesNo(answer ?? "y");
 
   if (!doCreateApiKey)
     setState({
@@ -101,16 +101,6 @@ You have not defined an API key. You will need to create one and add the TWILIO_
     console.error("Unable to create API Key");
     throw error;
   }
-}
-
-function evalYesNo(answer) {
-  if (!answer) answer = "y";
-  answer = answer.trim().toLowerCase();
-
-  if (answer === "y" || answer === "yes") return true;
-  if (answer === "n" || answer === "no") return false;
-
-  throw Error("Invalid Reponse");
 }
 
 async function render() {
