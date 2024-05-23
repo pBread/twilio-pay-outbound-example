@@ -42,5 +42,5 @@ async function handler(ctx, event, callback) {
     pay.prompt({ for: step }).say({ voice }, promptConf.script[step]);
   }
 
-  callback(null, {});
+  callback(null, twiml);
 }
