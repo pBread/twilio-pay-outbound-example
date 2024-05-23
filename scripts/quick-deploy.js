@@ -32,9 +32,6 @@ function makePhonePool() {
 }
 
 let state = {
-  message: "",
-  warnings: [],
-
   accountSid: ACCOUNT_SID,
   authToken: AUTH_TOKEN,
 
