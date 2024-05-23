@@ -30,6 +30,16 @@ const {
   TWILIO_PHONE_POOL,
 } = process.env;
 
+function makePhonePool() {
+  try {
+    const phones = JSON.parse(TWILIO_PHONE_POOL);
+    if (!Array.isArray(phones)) throw Error("");
+    return phones.filter((phone) => phone !== TWILIO_PAY_PHONE);
+  } catch (error) {}
+
+  return [];
+}
+
 let state = {
   message: "",
   warnings: [],
@@ -47,6 +57,9 @@ let state = {
   apiSecret: TWILIO_API_SECRET,
 
   syncSvcSid: SYNC_SERVICE_SID,
+
+  payPhone: TWILIO_PAY_PHONE,
+  phonePool: makePhonePool(),
 };
 const setState = async (update = {}) => {
   state = { ...state, ...update };
@@ -148,6 +161,10 @@ async function setupSyncService() {
   } catch (error) {
     console.error("Unable to create SyncMap");
   }
+}
+
+async function manageProcuringPayPhone() {
+  if (!state.payPhone) ask("");
 }
 
 async function render() {
