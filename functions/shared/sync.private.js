@@ -61,6 +61,20 @@ async function reservePhoneNumber(customerPN) {
   }
 
   if (!reservedPN) {
+    // check if the syncMap for reservations exists
+    const syncMap = await syncClient.maps
+      .create({ uniqueName: "reservations" })
+      .catch(() => {});
+
+    if (syncMap) {
+      console.log(
+        "The SyncMap to track reservations did not exist. One has been created. Retrying to reserve phone number."
+      );
+      return reservePhoneNumber(customerPN);
+    }
+  }
+
+  if (!reservedPN) {
     throw Error(`\
 No phone numbers available for reservation.
 

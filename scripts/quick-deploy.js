@@ -12,7 +12,7 @@ const rl = require("readline").createInterface({
 
 const ask = async (question) =>
   new Promise((resolve) => {
-    rl.question(question, (answer) => {
+    rl.question(`${question}:  `, (answer) => {
       resolve(answer);
     });
   });
@@ -59,6 +59,7 @@ let client = require("twilio")(ACCOUNT_SID, AUTH_TOKEN);
   await manageAccount();
   await manageApiKey();
   await manageSyncService();
+  await setupSyncService();
 
   rl.close();
 })();
@@ -123,6 +124,29 @@ async function manageSyncService() {
   } catch (error) {
     console.error("Unable to create Sync Service");
     throw error;
+  }
+}
+
+async function setupSyncService() {
+  console.log("checking if reservations SyncMap exists");
+
+  const curSyncMap = await client.sync.v1
+    .services(state.syncSvcSid)
+    .syncMaps("reservations")
+    .fetch()
+    .catch(() => null);
+
+  if (curSyncMap) return console.log("reservations SyncMap already exists");
+
+  console.log("creating a SyncMap to track phone reservations....");
+  try {
+    const syncMap = await client.sync.v1
+      .services(state.syncSvcSid)
+      .syncMaps.create({ uniqueName: "reservations" });
+
+    console.log("success! created SyncMap to track phone reservations");
+  } catch (error) {
+    console.error("Unable to create SyncMap");
   }
 }
 
