@@ -2,20 +2,11 @@
  Quick Deploy Script
 
 ****************************************************/
+const {
+  IncomingPhoneNumberInstance,
+} = require("twilio/lib/rest/api/v2010/account/incomingPhoneNumber");
 const util = require("./util");
 require("dotenv").config();
-const rl = require("readline").createInterface({
-  input: process.stdin,
-  output: process.stdout,
-  terminal: true,
-});
-
-const ask = async (question) =>
-  new Promise((resolve) => {
-    rl.question(`${question}:  `, (answer) => {
-      resolve(answer);
-    });
-  });
 
 const {
   ACCOUNT_SID,
@@ -43,10 +34,6 @@ function makePhonePool() {
 let state = {
   message: "",
   warnings: [],
-  warnApiKey: false,
-  warnSyncSvc: false,
-  warnPayPhone: false,
-  warnPhonePool: false,
 
   accountSid: ACCOUNT_SID,
   authToken: AUTH_TOKEN,
@@ -61,20 +48,31 @@ let state = {
   payPhone: TWILIO_PAY_PHONE,
   phonePool: makePhonePool(),
 };
+
 const setState = async (update = {}) => {
   state = { ...state, ...update };
+
+  let env = {};
+  if (update.apiKey) env["TWILIO_API_KEY"] = update.apiKey;
+  if (update.apiSecret) env["TWILIO_API_SECRET"] = update.apiSecret;
+  if (update.syncSvcSid) env["SYNC_SERVICE_SID"] = update.syncSvcSid;
+  if (update.payPhone) env["TWILIO_PAY_PHONE"] = update.payPhone;
+  if (update.phonePool)
+    env["TWILIO_PHONE_POOL"] = JSON.stringify(update.phonePool);
+
+  if (Object.keys(env).length) util.updateEnvFile(env);
+
   await render();
 };
 
-let client = require("twilio")(ACCOUNT_SID, AUTH_TOKEN);
+const client = require("twilio")(ACCOUNT_SID, AUTH_TOKEN);
 
 (async () => {
   await manageAccount();
   await manageApiKey();
   await manageSyncService();
   await setupSyncService();
-
-  rl.close();
+  await procurePhones();
 })();
 
 async function manageAccount() {
@@ -97,14 +95,6 @@ async function manageAccount() {
 async function manageApiKey() {
   if (state.apiKey && state.apiSecret) return;
 
-  const answer = await ask(
-    `You have not provided an API Key. Would you like to create an API key now? (y or n, default = y)`
-  );
-
-  const doCreateApiKey = util.evalYesNo(answer ?? "y");
-
-  if (!doCreateApiKey) return setState({ warnApiKey: true });
-
   try {
     const apiKeyResult = await client.newKeys.create({
       friendlyName: "twilio-pay-example",
@@ -123,12 +113,6 @@ async function manageApiKey() {
 async function manageSyncService() {
   if (state.syncSvcSid) return;
 
-  const answer = await ask(
-    `You have not provided an Sync Service SID. Would you like to create a new Sync Service now? (y or n, default = y)`
-  );
-
-  const doCreateSyncSvc = util.evalYesNo(answer ?? "y");
-  if (!doCreateSyncSvc) return setState({ warnSyncSvc: true });
   try {
     const syncSvc = await client.sync.services.create({
       friendlyName: "twilio-pay-sync-service",
@@ -153,18 +137,42 @@ async function setupSyncService() {
 
   console.log("creating a SyncMap to track phone reservations....");
   try {
-    const syncMap = await client.sync.v1
+    await client.sync.v1
       .services(state.syncSvcSid)
       .syncMaps.create({ uniqueName: "reservations" });
 
     console.log("success! created SyncMap to track phone reservations");
   } catch (error) {
-    console.error("Unable to create SyncMap");
+    console.error("unable to create SyncMap");
   }
 }
 
-async function manageProcuringPayPhone() {
-  if (!state.payPhone) ask("");
+async function procurePhones() {
+  if (state.payPhone) return;
+
+  const availableNumbers = await client
+    .availablePhoneNumbers("US")
+    .local.list();
+
+  const [payPhone, ...phonePool] = await Promise.all([
+    client.incomingPhoneNumbers.create({
+      friendlyName: "twilio-pay-inbound",
+      phoneNumber: availableNumbers[0].phoneNumber,
+    }),
+    client.incomingPhoneNumbers.create({
+      friendlyName: "twilio-pay-pool",
+      phoneNumber: availableNumbers[1].phoneNumber,
+    }),
+    client.incomingPhoneNumbers.create({
+      friendlyName: "twilio-pay-pool",
+      phoneNumber: availableNumbers[2].phoneNumber,
+    }),
+  ]);
+
+  await setState({
+    payPhone: payPhone.phoneNumber,
+    phonePool: phonePool.map((phone) => phone.phoneNumber),
+  });
 }
 
 async function render() {
