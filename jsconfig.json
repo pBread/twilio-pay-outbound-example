@@ -1,4 +1,4 @@
 {
-  "include": ["functions/**/*.js", "global.d.ts"],
+  "include": ["functions/**/*.js", "global.d.ts", "scripts/**/*.js"],
   "exclude": ["node_modules"]
 }

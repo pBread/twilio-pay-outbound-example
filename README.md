@@ -24,8 +24,6 @@ npm install
 
 You need to add the `ACCOUNT_SID` & `AUTH_TOKEN` environment variables. All of the other variables are optional if you are using the `quick-deploy` script. That script will automatically generate all other environment variables on your behalf.
 
-Subaccount credentials are OK. But, if you provide your main account credentials, the `quick-deploy` will give you the option to create a Subaccount for you.
-
 ```.env
 ACCOUNT_SID=ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 AUTH_TOKEN=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
