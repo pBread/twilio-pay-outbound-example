@@ -6,7 +6,7 @@ _NOTE: The payment method collection flow is not fully built out. After providin
 
 ## Quick Start
 
-### Download Repo and Install
+### Step 1: Download Repo and Install
 
 ```bash
 git clone https://github.com/pBread/twilio-pay-outbound-example.git
@@ -20,7 +20,7 @@ nvm use 18
 npm install
 ```
 
-### Add Env Variables, at least ACCOUNT_SID & AUTH_TOKEN
+### Step 2: Add Env Variables, at least ACCOUNT_SID & AUTH_TOKEN
 
 You need to add the `ACCOUNT_SID` & `AUTH_TOKEN` environment variables. All of the other variables are optional if you are using the `quick-deploy` script. That script will automatically generate all other environment variables on your behalf.
 
@@ -29,7 +29,7 @@ ACCOUNT_SID=ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 AUTH_TOKEN=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ```
 
-### Run Quick Deploy Script
+### Step 3: Run Quick Deploy Script
 
 ```bash
 npm run quick-deploy
@@ -47,7 +47,7 @@ Other than that, the script will always perform the following:
 - A SyncMap called "reservations" will be created.
 - The incoming-call webhook of the TWILIO_PAY_PHONE will be created.
 
-### Setup Pay Connector
+### Step 4: Setup Pay Connector
 
 #### Existing Pay Connector
 
