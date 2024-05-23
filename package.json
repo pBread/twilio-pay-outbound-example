@@ -12,6 +12,7 @@
   },
   "devDependencies": {
     "@types/node": "^20.12.12",
+    "dotenv": "^16.4.5",
     "twilio-run": "^4.0.0",
     "typescript": "^5.4.5"
   },
