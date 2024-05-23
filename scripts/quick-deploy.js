@@ -35,9 +35,11 @@ let state = {
   authToken: AUTH_TOKEN,
 
   account: undefined,
-  accountName() {
-    return this.account?.friendlyName;
-  },
+
+  apiKey: TWILIO_API_KEY,
+  apiSecret: TWILIO_API_SECRET,
+
+  syncSvcSid: SYNC_SERVICE_SID,
 };
 const setState = async (update = {}) => {
   state = { ...state, ...update };
@@ -48,20 +50,23 @@ let client = require("twilio")(ACCOUNT_SID, AUTH_TOKEN);
 
 (async () => {
   await manageAccount();
-  await askQuestion("hello");
+  await ask("Howdy");
+  await render();
   rl.close();
 })();
 
 async function manageAccount() {
   const account = await client.api.v2010.accounts(ACCOUNT_SID).fetch();
+
   await setState({ account });
 }
 
 async function render() {
-  console.clear();
+  //   console.clear();
   util.printTable([
     ["Account SID", state.accountSid],
-    state.accountName.accountName && ["Account Name", state.accountName],
-    null,
+    ["Account Name", state.account?.friendlyName],
+    "separator",
+    ["Has API Key", !!state.apiKey && !!state.apiSecret],
   ]);
 }
