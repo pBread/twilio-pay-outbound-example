@@ -1,0 +1,21 @@
+{
+  "name": "twilio-pay-outbound-example",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "deploy": "twilio-run deploy",
+    "dev": "twilio-run"
+  },
+  "dependencies": {
+    "@twilio/runtime-handler": "2.0.0",
+    "twilio": "^3.56"
+  },
+  "devDependencies": {
+    "@types/node": "^20.12.12",
+    "twilio-run": "^4.0.0",
+    "typescript": "^5.4.5"
+  },
+  "engines": {
+    "node": "18"
+  }
+}
