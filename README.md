@@ -27,6 +27,8 @@ AUTH_TOKEN=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 ### Run Quick Deploy Script
 
+_WARNING: this script will create services, procure phone numbers, and create API Keys in your Twilio Account._
+
 ```bash
 npm run quick-deploy
 ```
