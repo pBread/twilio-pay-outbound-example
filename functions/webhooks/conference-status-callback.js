@@ -32,5 +32,17 @@ async function onUserAnswer(ctx, event, callback) {
 }
 
 async function onCallComplete(ctx, event, callback) {
+  // get helpers
+  const fns = Runtime.getFunctions();
+  const sync = require(fns["shared/sync"].path);
+
+  const customerPN = event.To;
+
+  const session = await sync.getSession(customerPN);
+  await Promise.allSettled([
+    sync.removeReservation(session.reservedPN), // free up reserved phone number
+    sync.updateSession(customerPN, { status: event.CallStatus }),
+  ]);
+
   callback(null, {});
 }
