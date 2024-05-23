@@ -1,1 +1,44 @@
 # Twilio Pay Outbound Example
+
+## Quick Start
+
+### Download Repo and Install
+
+```bash
+git clone https://github.com/pBread/twilio-pay-outbound-example.git
+cd twilio-pay-outbound-example
+
+# this project requires node version 18
+# see nvm below for installation instructions
+nvm install 18
+nvm use 18
+
+npm install
+```
+
+### Add Env Variables, at least ACCOUNT_SID & AUTH_TOKEN
+
+You need to add the ACCOUNT_SID & AUTH_TOKEN environment variables. All of the other variables are optional if you are using the `quick-deploy` script. That script will automatically generate all other environment variables on your behalf.
+
+```.env
+ACCOUNT_SID=ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+AUTH_TOKEN=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+```
+
+### Run Quick Deploy Script
+
+```bash
+npm run quick-deploy
+```
+
+## Node Version Manager (NVM)
+
+This project requires node version 18. NVM is a standard package to manage node versions.
+
+[NVM Github](https://github.com/nvm-sh/nvm)
+
+[Install with Homebrew](https://formulae.brew.sh/formula/nvm)
+
+```bash
+brew install nvm
+```
