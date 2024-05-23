@@ -15,5 +15,21 @@ exports.handler = async function wrapper(ctx, event, callback) {
 };
 
 async function handler(ctx, event, callback) {
+  const fns = Runtime.getFunctions();
+
+  const conf = require(fns["shared/conf"].path);
+  const sync = require(fns["shared/sync"].path);
+
+  const customerPN = event.customerPN;
+
+  const stepIdx = conf.paymentSteps.indexOf(event.For);
+  const paymentStep = conf.paymentSteps[stepIdx + 1] ?? "wrapping-up";
+
+  await sync.updateSession(customerPN, {
+    attempt: event.Attempt,
+    errorType: event.ErrorType,
+    paymentStep,
+  });
+
   callback(null, {});
 }
