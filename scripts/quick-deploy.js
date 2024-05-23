@@ -31,7 +31,13 @@ const {
 } = process.env;
 
 let state = {
+  message: "",
   warnings: [],
+  warnApiKey: false,
+  warnSyncSvc: false,
+  warnPayPhone: false,
+  warnPhonePool: false,
+
   accountSid: ACCOUNT_SID,
   authToken: AUTH_TOKEN,
 
@@ -52,6 +58,7 @@ let client = require("twilio")(ACCOUNT_SID, AUTH_TOKEN);
 (async () => {
   await manageAccount();
   await manageApiKey();
+  await manageSyncService();
 
   rl.close();
 })();
@@ -82,11 +89,7 @@ async function manageApiKey() {
 
   const doCreateApiKey = util.evalYesNo(answer ?? "y");
 
-  if (!doCreateApiKey)
-    setState({
-      warnings: state.warnings.concat(`\
-You have not defined an API key. You will need to create one and add the TWILIO_API_KEY & TWILIO_API_SECRET to environment variables to your Twilio Function.`),
-    });
+  if (!doCreateApiKey) return setState({ warnApiKey: true });
 
   try {
     const apiKeyResult = await client.newKeys.create({
@@ -103,6 +106,26 @@ You have not defined an API key. You will need to create one and add the TWILIO_
   }
 }
 
+async function manageSyncService() {
+  if (state.syncSvcSid) return;
+
+  const answer = await ask(
+    `You have not provided an Sync Service SID. Would you like to create a new Sync Service now? (y or n, default = y)`
+  );
+
+  const doCreateSyncSvc = util.evalYesNo(answer ?? "y");
+  if (!doCreateSyncSvc) return setState({ warnSyncSvc: true });
+  try {
+    const syncSvc = await client.sync.services.create({
+      friendlyName: "twilio-pay-sync-service",
+    });
+    setState({ syncSvcSid: syncSvc.sid });
+  } catch (error) {
+    console.error("Unable to create Sync Service");
+    throw error;
+  }
+}
+
 async function render() {
   console.clear();
   util.printTable([
@@ -110,11 +133,24 @@ async function render() {
     ["Account Name", state.account?.friendlyName],
     "separator",
     ["Has API Key", !!state.apiKey && !!state.apiSecret],
+    "blank",
+    ["Sync Service SID", state.syncSvcSid],
   ]);
 
-  for (let i = 0; i < state.warnings.length; i++) {
+  const warnings = [];
+
+  if (state.warnApiKey)
+    warnings.push(
+      `You will need to create a Twilio API Key and add the TWILIO_API_KEY & TWILIO_API_SECRET to environment variables to your Twilio Function. See https://www.twilio.com/docs/iam/api-keys#create-an-api-key`
+    );
+  if (state.warnSyncSvc)
+    warnings.push(
+      `You will need to create a Sync Service and add the SYNC_SERVICE_SID to the Function's env variables`
+    );
+
+  for (let i = 0; i < warnings.length; i++) {
     if (i === 0) console.log("\n\nMessages:");
-    const warning = `(${i + 1})  ` + state.warnings[i];
+    const warning = `(${i + 1})  ` + warnings[i];
     console.log(warning);
   }
 

@@ -2,6 +2,7 @@ module.exports = { evalYesNo, printTable };
 
 function evalYesNo(answer) {
   if (!answer) return;
+  console.log("answer", answer);
   answer = answer.trim().toLowerCase();
 
   if (answer === "y" || answer === "yes") return true;
