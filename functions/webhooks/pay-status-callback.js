@@ -1,3 +1,7 @@
+// Status callback for Twilio Pay during payment collection, i.e. after the user enters
+// credit card number, expiration, etc.
+// This callback is referenced in webhooks/incoming-call when Twilio Pay is initated
+
 const { ACCOUNT_SID, AUTH_TOKEN } = process.env;
 const client = require("twilio")(ACCOUNT_SID, AUTH_TOKEN);
 
