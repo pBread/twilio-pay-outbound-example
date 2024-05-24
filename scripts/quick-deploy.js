@@ -8,8 +8,10 @@ const client = require("twilio")(
 
 const SS = {
   notStarted: "Not Started",
-  working: "Working",
+  creating: "Creating",
   created: "Created",
+
+  configuring: "Configuring",
   done: "Done",
   failed: "Failed",
 };
@@ -62,8 +64,8 @@ async function checkMakeApiKey() {
     });
 
   await setState({
-    apiKeyStatus: SS.working,
-    apiSecretStatus: SS.working,
+    apiKeyStatus: SS.creating,
+    apiSecretStatus: SS.creating,
     status: "Generating new API Key",
   });
 
@@ -96,7 +98,7 @@ async function checkMakeSyncSvc() {
   else {
     try {
       await setState({
-        syncSvcSidStatus: SS.working,
+        syncSvcSidStatus: SS.creating,
         status: "Creating Sync Service",
       });
       const syncSvc = await client.sync.services.create({
@@ -132,7 +134,7 @@ async function checkMakeSyncSvc() {
   try {
     await setState({
       status: "Configuring Sync Service",
-      syncSvcSidStatus: SS.working,
+      syncSvcSidStatus: SS.configuring,
     });
     await client.sync.v1
       .services(state.syncSvcSid)
@@ -185,12 +187,12 @@ async function checkMakePayPhone() {
       payPhoneStatus: SS.created,
     });
   else {
-    await setState({
-      status: "Creating Pay Phone",
-      payPhoneStatus: SS.working,
-    });
-
     try {
+      await setState({
+        status: "Creating Pay Phone",
+        payPhoneStatus: SS.creating,
+      });
+
       const availableNumbers = await client
         .availablePhoneNumbers("US")
         .local.list({ limit: 1 });
@@ -227,7 +229,7 @@ async function checkMakePhonePool() {
   else {
     await setState({
       status: "Creating phone pool",
-      payPhoneStatus: SS.working,
+      phonePoolStatus: SS.creating,
     });
 
     try {
@@ -311,5 +313,5 @@ async function setState(update = {}) {
 
   // print to console
   await render();
-  await util.sleep(1000);
+  await util.sleep(500);
 }
