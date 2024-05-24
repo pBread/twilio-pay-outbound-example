@@ -1,5 +1,7 @@
 const util = require("./util");
 require("dotenv").config();
+const path = require("path");
+const fs = require("fs");
 
 const client = require("twilio")(
   process.env.ACCOUNT_SID,
@@ -39,23 +41,29 @@ let state = {
 
   reservationTtl: process.env.RESERVATION_TTL,
   reservationTtlStatus: process.env.RESERVATION_TTL ? SS.done : SS.notStarted,
+
+  fnSvcStatus: SS.notStarted,
+  fnSvcSid: undefined,
+  fnDomainBase: undefined,
 };
 
 (async () => {
-  // start process
-  await initPhonePool();
-  const account = await client.api.v2010.accounts(state.accountSid).fetch();
-  await setState({ account });
+  // // start process
+  // await initPhonePool();
+  // const account = await client.api.v2010.accounts(state.accountSid).fetch();
+  // await setState({ account });
 
-  // check or create necessary records & configurations
-  await checkCreateApiKey();
-  await checkCreateSyncSvc();
-  await checkCreatePayPhone();
-  await checkCreatePhonePool();
-  await checkCreateReservationTtl();
+  // // check or create necessary records & configurations
+  // await checkCreateApiKey();
+  // await checkCreateSyncSvc();
+  // await checkCreatePayPhone();
+  // await checkCreatePhonePool();
+  // await checkCreateReservationTtl();
 
-  // deploy to Twilio
-  await deployToTwilio();
+  // // deploy to Twilio
+  // await deployToTwilio();
+  await checkDeployment();
+  await configureFnSvc();
 
   // await setState({ status: "Finished" });
 })();
@@ -298,6 +306,11 @@ async function checkCreateReservationTtl() {
 const { spawn } = require("child_process");
 
 async function deployToTwilio() {
+  setState({
+    status: "Deploying Twilio Serverless Functions",
+    fnSvcStatus: SS.creating,
+  });
+
   return new Promise((resolve) => {
     const command = spawn("yarn", ["deploy"], {
       shell: true, // Use the shell to execute the command
@@ -320,6 +333,35 @@ async function deployToTwilio() {
   });
 }
 
+async function checkDeployment() {
+  const deployPath = path.join(__dirname, "../", ".twiliodeployinfo");
+  const deployInfo = JSON.parse(fs.readFileSync(deployPath, "utf-8"));
+
+  const fnSvcSid = Object.values(deployInfo)[0].serviceSid;
+  await setState({
+    fnSvcSid,
+    fnSvcStatus: SS.created,
+    status: "Retrieved Serverless Config",
+  });
+}
+
+async function configureFnSvc() {
+  await setState({ fnSvcStatus: SS.configuring });
+
+  await client.serverless.v1
+    .services(state.fnSvcSid)
+    .update({ uiEditable: true });
+
+  const svc = await client.serverless.v1.services(state.fnSvcSid).fetch();
+
+  const fnDomainBase = svc.domainBase;
+
+  await setState({
+    fnDomainBase,
+    status: "Serverless Functions Created",
+    fnSvcStatus: SS.done,
+  });
+}
 /****************************************************
  Misc
 ****************************************************/
@@ -346,6 +388,10 @@ async function render() {
     "blank",
     ["Reservation Time to Live (TTL) Status  ", state.reservationTtlStatus],
     ["Reservation Time to Live (TTL)", state.reservationTtl],
+    "separator",
+    ["Twilio Serverless Fn Service SID", state.fnSvcSid],
+    ["Twilio Serverless Fn Service Status  ", state.fnSvcStatus],
+    ["Twilio Serverless Domain ", state.fnDomainBase],
   ]);
 
   console.log("\n");
