@@ -18,8 +18,6 @@ function updateEnvFile(
   // Load existing .env variables
   const envConfig = dotenv.parse(fs.readFileSync(envFilePath));
 
-  console.log("envConfig", envConfig);
-
   // Track changes
   let updated = false;
 

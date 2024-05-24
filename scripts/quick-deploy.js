@@ -54,7 +54,10 @@ let state = {
   await checkCreatePhonePool();
   await checkCreateReservationTtl();
 
-  await setState({ status: "Finished" });
+  // deploy to Twilio
+  await deployToTwilio();
+
+  // await setState({ status: "Finished" });
 })();
 
 /****************************************************
@@ -159,7 +162,7 @@ async function checkCreateSyncSvc() {
 }
 
 /****************************************************
- Setup Phones
+ Create Phones
 ****************************************************/
 async function initPhonePool() {
   try {
@@ -290,6 +293,34 @@ async function checkCreateReservationTtl() {
 }
 
 /****************************************************
+ Deploy
+****************************************************/
+const { spawn } = require("child_process");
+
+async function deployToTwilio() {
+  return new Promise((resolve) => {
+    const command = spawn("yarn", ["deploy"], {
+      shell: true, // Use the shell to execute the command
+    });
+    command.stdout.on("data", (data) => {
+      console.log(data.toString());
+    });
+
+    command.stderr.on("error", (data) => {
+      console.error(data.toString());
+    });
+
+    command.on("message", (data) => {
+      console.log(data.toString());
+    });
+
+    command.on("close", (code) => {
+      resolve("done");
+    });
+  });
+}
+
+/****************************************************
  Misc
 ****************************************************/
 async function render() {
@@ -330,7 +361,7 @@ async function setState(update = {}) {
   // update env file
   let env = {};
   if (update.apiKey) env["TWILIO_API_KEY"] = update.apiKey;
-  if (update.apiSecret) env["TWILIO.API_SECRET"] = update.apiSecret;
+  if (update.apiSecret) env["TWILIO_API_SECRET"] = update.apiSecret;
   if (update.syncSvcSid) env["SYNC_SERVICE_SID"] = update.syncSvcSid;
   if (update.payPhone) env["TWILIO_PAY_PHONE"] = update.payPhone;
   if (update.phonePool)
@@ -341,5 +372,5 @@ async function setState(update = {}) {
 
   // print to console
   await render();
-  await util.sleep(500);
+  await util.sleep(1);
 }
