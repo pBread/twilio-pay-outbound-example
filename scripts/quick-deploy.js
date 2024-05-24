@@ -36,16 +36,23 @@ let state = {
 
   payPhoneStatus: process.env.TWILIO_PAY_PHONE ? SS.created : SS.notStarted,
   phonePoolStatus: SS.notStarted,
+
+  reservationTtl: process.env.RESERVATION_TTL,
+  reservationTtlStatus: process.env.RESERVATION_TTL ? SS.done : SS.notStarted,
 };
 
 (async () => {
+  // start process
   await initPhonePool();
   const account = await client.api.v2010.accounts(state.accountSid).fetch();
   await setState({ account });
-  await checkMakeApiKey();
-  await checkMakeSyncSvc();
-  await checkMakePayPhone();
-  await checkMakePhonePool();
+
+  // check or create necessary records & configurations
+  await checkCreateApiKey();
+  await checkCreateSyncSvc();
+  await checkCreatePayPhone();
+  await checkCreatePhonePool();
+  await checkCreateReservationTtl();
 
   await setState({ status: "Finished" });
 })();
@@ -53,7 +60,7 @@ let state = {
 /****************************************************
  Create Records
 ****************************************************/
-async function checkMakeApiKey() {
+async function checkCreateApiKey() {
   await setState({ status: "Checking API key" });
 
   if (state.apiKey && state.apiSecret)
@@ -91,7 +98,7 @@ async function checkMakeApiKey() {
   }
 }
 
-async function checkMakeSyncSvc() {
+async function checkCreateSyncSvc() {
   await setState({ status: "Checking if Sync Service exists" });
   if (state.syncSvcSid)
     await setState({ status: "Sync Service already exists" });
@@ -178,7 +185,7 @@ async function initPhonePool() {
   }
 }
 
-async function checkMakePayPhone() {
+async function checkCreatePayPhone() {
   await setState({ status: "Checking Pay Phone" });
 
   if (state.payPhone)
@@ -218,7 +225,7 @@ async function checkMakePayPhone() {
   }
 }
 
-async function checkMakePhonePool() {
+async function checkCreatePhonePool() {
   await setState({ status: "Checking phone pool" });
 
   if (state.phonePool?.length > 2)
@@ -265,6 +272,23 @@ async function checkMakePhonePool() {
   }
 }
 
+async function checkCreateReservationTtl() {
+  await setState({
+    status: "Checking reservation TTL",
+  });
+
+  if (state.reservationTtl)
+    return await setState({
+      status: "Reservation TTL configured",
+    });
+
+  await setState({
+    status: "Setting Reservation TTL to 300 seconds",
+    reservationTtl: 300,
+    reservationTtlStatus: SS.done,
+  });
+}
+
 /****************************************************
  Misc
 ****************************************************/
@@ -288,6 +312,9 @@ async function render() {
     "blank",
     ["Phone Pool Status", state.phonePoolStatus],
     ["Phone Pool", state.phonePool?.join(", ")],
+    "blank",
+    ["Reservation Time to Live (TTL) Status  ", state.reservationTtlStatus],
+    ["Reservation Time to Live (TTL)", state.reservationTtl],
   ]);
 
   console.log("\n");
@@ -308,6 +335,7 @@ async function setState(update = {}) {
   if (update.payPhone) env["TWILIO_PAY_PHONE"] = update.payPhone;
   if (update.phonePool)
     env["TWILIO_PHONE_POOL"] = JSON.stringify(update.phonePool);
+  if (update.reservationTtl) env["RESERVATION_TTL"] = update.reservationTtl;
 
   if (Object.keys(env).length) return util.updateEnvFile(env);
 
