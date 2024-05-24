@@ -28,13 +28,24 @@ let state = {
   apiKeyStatus: process.env.TWILIO_API_KEY ? SS.created : SS.notStarted,
   apiSecretStatus: process.env.TWILIO_API_SECRET ? SS.created : SS.notStarted,
   syncSvcSidStatus: process.env.SYNC_SERVICE_SID ? SS.created : SS.notStarted,
+
+  payPhone: process.env.TWILIO_PAY_PHONE,
+  phonePool: undefined,
+
+  payPhoneStatus: process.env.TWILIO_PAY_PHONE ? SS.created : SS.notStarted,
+  phonePoolStatus: SS.notStarted,
 };
 
 (async () => {
+  await initPhonePool();
   const account = await client.api.v2010.accounts(state.accountSid).fetch();
   await setState({ account });
   await checkMakeApiKey();
   await checkMakeSyncSvc();
+  await checkMakePayPhone();
+  await checkMakePhonePool();
+
+  await setState({ status: "Finished" });
 })();
 
 /****************************************************
@@ -139,6 +150,120 @@ async function checkMakeSyncSvc() {
 }
 
 /****************************************************
+ Setup Phones
+****************************************************/
+async function initPhonePool() {
+  try {
+    const phones = JSON.parse(process.env.TWILIO_PHONE_POOL);
+    if (!Array.isArray(phones)) throw Error("");
+    const phonePool = phones.filter(
+      (phone) => phone !== process.env.TWILIO_PAY_PHONE
+    );
+
+    if (phonePool.length < 2) throw Error("");
+
+    await setState({
+      phonePool,
+      phonePoolStatus: SS.created,
+      status: "Initialized phone pool from env variables.",
+    });
+  } catch (error) {
+    await setState({
+      phonePool: undefined,
+      phonePoolStatus: SS.notStarted,
+      status: "Unable to initialize phone pool from env variables.",
+    });
+  }
+}
+
+async function checkMakePayPhone() {
+  await setState({ status: "Checking Pay Phone" });
+
+  if (state.payPhone)
+    await setState({
+      status: "Pay Phone already created",
+      payPhoneStatus: SS.created,
+    });
+  else {
+    await setState({
+      status: "Creating Pay Phone",
+      payPhoneStatus: SS.working,
+    });
+
+    try {
+      const availableNumbers = await client
+        .availablePhoneNumbers("US")
+        .local.list({ limit: 1 });
+
+      const phoneNumber = availableNumbers[0].phoneNumber;
+
+      await client.incomingPhoneNumbers.create({
+        friendlyName: "twilio-pay-inbound",
+        phoneNumber,
+      });
+
+      await setState({
+        status: "Successfully created Pay Phone",
+        payPhoneStatus: SS.created,
+        payPhone: phoneNumber,
+      });
+    } catch (error) {
+      await setState({
+        status: "Error creating Pay Phone",
+        payPhoneStatus: SS.failed,
+      });
+    }
+  }
+}
+
+async function checkMakePhonePool() {
+  await setState({ status: "Checking phone pool" });
+
+  if (state.phonePool?.length > 2)
+    await setState({
+      status: "Phone pool already exists",
+      phonePoolStatus: SS.created,
+    });
+  else {
+    await setState({
+      status: "Creating phone pool",
+      payPhoneStatus: SS.working,
+    });
+
+    try {
+      const availableNumbers = await client
+        .availablePhoneNumbers("US")
+        .local.list({ limit: 2 });
+
+      const phoneNumber0 = availableNumbers[0].phoneNumber;
+      const phoneNumber1 = availableNumbers[1].phoneNumber;
+
+      await Promise.all([
+        client.incomingPhoneNumbers.create({
+          friendlyName: "twilio-pay-pool",
+          phoneNumber: phoneNumber0,
+        }),
+        client.incomingPhoneNumbers.create({
+          friendlyName: "twilio-pay-pool",
+          phoneNumber: phoneNumber1,
+        }),
+      ]);
+
+      await setState({
+        status: "Successfully created phone pool",
+        phonePoolStatus: SS.created,
+        phonePool: [phoneNumber0, phoneNumber1],
+      });
+    } catch (error) {
+      await setState({
+        status: "Error creating phone pool",
+        phonePoolStatus: SS.failed,
+      });
+    }
+  }
+}
+
+/****************************************************
  Misc
 ****************************************************/
 async function render() {
@@ -153,6 +278,14 @@ async function render() {
     ["API Secret Status", state.apiSecretStatus],
     ["API Key", state.apiKey],
     "separator",
+    ["Sync Status", state.syncSvcSidStatus],
+    ["Sync Service SID", state.syncSvcSid],
+    "separator",
+    ["Pay Phone Status", state.payPhoneStatus],
+    ["Pay Phone", state.payPhone],
+    "blank",
+    ["Phone Pool Status", state.phonePoolStatus],
+    ["Phone Pool", state.phonePool?.join(", ")],
   ]);
 
   console.log("\n");
