@@ -1,4 +1,4 @@
-module.exports = { evalYesNo, printTable, updateEnvFile };
+module.exports = { evalYesNo, printTable, updateEnvFile, sleep };
 
 const fs = require("fs");
 const dotenv = require("dotenv");
@@ -90,4 +90,12 @@ function printTable(data) {
     } else if (row === undefined) {
     }
   });
+}
+
+async function sleep(ms = 500) {
+  return new Promise((resolve) =>
+    setTimeout(() => {
+      resolve(null);
+    }, ms)
+  );
 }
