@@ -9,7 +9,7 @@ const {
 
 module.exports = {
   getHostname: () => `https://${DOMAIN_NAME}`,
-  getPayConnectorName: () => PAY_CONNECTOR_NAME,
+  getPayConnectorName: () => PAY_CONNECTOR_NAME ?? "Default",
   getPayPhone: () => TWILIO_PAY_PHONE,
   getPhonePool,
   getReservationTTL: () => parseInt(RESERVATION_TTL),
