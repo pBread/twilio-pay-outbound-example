@@ -45,27 +45,31 @@ let state = {
   fnSvcStatus: SS.notStarted,
   fnSvcSid: undefined,
   fnDomainBase: undefined,
+  urls: undefined,
 };
 
 (async () => {
-  // // start process
-  // await initPhonePool();
-  // const account = await client.api.v2010.accounts(state.accountSid).fetch();
-  // await setState({ account });
+  // start process
+  await initPhonePool();
+  const account = await client.api.v2010.accounts(state.accountSid).fetch();
+  await setState({ account });
 
-  // // check or create necessary records & configurations
-  // await checkCreateApiKey();
-  // await checkCreateSyncSvc();
-  // await checkCreatePayPhone();
-  // await checkCreatePhonePool();
-  // await checkCreateReservationTtl();
+  // check or create necessary records & configurations
+  await checkCreateApiKey();
+  await checkCreateSyncSvc();
+  await checkCreatePayPhone();
+  await checkCreatePhonePool();
+  await checkCreateReservationTtl();
 
-  // // deploy to Twilio
-  // await deployToTwilio();
+  // deploy to Twilio
+  await deployToTwilio();
   await checkDeployment();
   await configureFnSvc();
 
-  // await setState({ status: "Finished" });
+  // configure phones
+  await configurePayPhone();
+
+  await setState({ status: "Finished" });
 })();
 
 /****************************************************
@@ -239,7 +243,7 @@ async function checkCreatePayPhone() {
 async function checkCreatePhonePool() {
   await setState({ status: "Checking phone pool" });
 
-  if (state.phonePool?.length > 2)
+  if (state.phonePool?.length > 1)
     await setState({
       status: "Phone pool already exists",
       phonePoolStatus: SS.created,
@@ -347,21 +351,47 @@ async function checkDeployment() {
 
 async function configureFnSvc() {
   await setState({ fnSvcStatus: SS.configuring });
+  try {
+    await client.serverless.v1
+      .services(state.fnSvcSid)
+      .update({ uiEditable: true });
 
-  await client.serverless.v1
-    .services(state.fnSvcSid)
-    .update({ uiEditable: true });
+    const svc = await client.serverless.v1.services(state.fnSvcSid).fetch();
 
-  const svc = await client.serverless.v1.services(state.fnSvcSid).fetch();
+    const functions = await client.serverless.v1
+      .services(state.fnSvcSid)
+      .functions.list();
 
-  const fnDomainBase = svc.domainBase;
+    const urls = functions.map((it) => it.friendlyName);
 
-  await setState({
-    fnDomainBase,
-    status: "Serverless Functions Created",
-    fnSvcStatus: SS.done,
-  });
+    await setState({
+      fnDomainBase: `https://${svc.domainBase}-dev.twil.io`,
+      status: "Serverless Functions Created",
+      fnSvcStatus: SS.done,
+      urls,
+    });
+  } catch (error) {
+    await setState({
+      status: "Error configuring Serverless Function",
+      fnSvcStatus: SS.failed,
+    });
+  }
 }
+
+/****************************************************
+ Configure Phone Numbers
+****************************************************/
+async function configurePayPhone() {
+  const phones = await client.incomingPhoneNumbers.list({
+    phoneNumber: state.payPhone,
+    limit: 1,
+  });
+
+  await client
+    .incomingPhoneNumbers(phones[0].sid)
+    .update({ voiceUrl: `${state.fnDomainBase}/webhooks/incoming-call` });
+}
+
 /****************************************************
  Misc
 ****************************************************/
@@ -395,6 +425,8 @@ async function render() {
   ]);
 
   console.log("\n");
+
+  if (state.urls) for (const url of state.urls) console.log(url);
 
   for (const status of state.statusHistory) console.log(status);
   console.log("\n");
