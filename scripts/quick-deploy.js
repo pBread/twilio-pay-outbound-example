@@ -3,10 +3,7 @@ require("dotenv").config();
 const path = require("path");
 const fs = require("fs");
 
-const client = require("twilio")(
-  process.env.ACCOUNT_SID,
-  process.env.AUTH_TOKEN
-);
+let client = require("twilio")(process.env.ACCOUNT_SID, process.env.AUTH_TOKEN);
 
 const SS = {
   notStarted: "Not Started",
@@ -24,6 +21,7 @@ let state = {
   statusHistory: ["Starting Quick Deploy"],
   // env variables
   accountSid: process.env.ACCOUNT_SID,
+  authToken: process.env.AUTH_TOKEN,
 
   apiKey: process.env.TWILIO_API_KEY,
   apiSecret: process.env.TWILIO_API_SECRET,
@@ -49,6 +47,8 @@ let state = {
 };
 
 (async () => {
+  await createSubaccount();
+
   // start process
   await initPhonePool();
   const account = await client.api.v2010.accounts(state.accountSid).fetch();
@@ -68,9 +68,28 @@ let state = {
 
   // configure phones
   await configurePayPhone();
+  await configurePhonePool();
 
   await setState({ status: "Finished" });
 })();
+
+async function createSubaccount() {
+  await setState({
+    state: "Creating subaccount",
+  });
+
+  const subaccount = await client.api.v2010.accounts.create({
+    friendlyName: `twilio-pay-${Math.floor(Math.random() * 9999)}`,
+  });
+
+  client = require("twilio")(subaccount.sid, subaccount.authToken);
+
+  await setState({
+    state: "Created subaccount",
+    accountSid: subaccount.sid,
+    authToken: subaccount.authToken,
+  });
+}
 
 /****************************************************
  Create Records
@@ -382,14 +401,55 @@ async function configureFnSvc() {
  Configure Phone Numbers
 ****************************************************/
 async function configurePayPhone() {
+  await setState({
+    status: "Configuring pay phone",
+    payPhoneStatus: SS.configuring,
+  });
   const phones = await client.incomingPhoneNumbers.list({
     phoneNumber: state.payPhone,
     limit: 1,
   });
 
-  await client
-    .incomingPhoneNumbers(phones[0].sid)
-    .update({ voiceUrl: `${state.fnDomainBase}/webhooks/incoming-call` });
+  await client.incomingPhoneNumbers(phones[0].sid).update({
+    voiceUrl: `${state.fnDomainBase}/webhooks/incoming-call`,
+    statusCallback: `${state.fnDomainBase}/webhooks/incoming-call-status-change`,
+  });
+
+  await setState({
+    status: "Configured pay phone",
+    payPhoneStatus: SS.done,
+  });
+}
+
+async function configurePhonePool() {
+  await setState({
+    status: "Configuring Phone Pool",
+    phonePoolStatus: SS.configuring,
+  });
+
+  const [phone0] = await client.incomingPhoneNumbers.list({
+    phoneNumber: state.phonePool[0],
+    limit: 1,
+  });
+
+  const [phone1] = await client.incomingPhoneNumbers.list({
+    phoneNumber: state.phonePool[1],
+    limit: 1,
+  });
+
+  await client.incomingPhoneNumbers(phone0.sid).update({
+    voiceUrl: `${state.fnDomainBase}/webhooks/incoming-call`,
+    statusCallback: `${state.fnDomainBase}/webhooks/incoming-call-status-change`,
+  });
+  await client.incomingPhoneNumbers(phone1.sid).update({
+    voiceUrl: `${state.fnDomainBase}/webhooks/incoming-call`,
+    statusCallback: `${state.fnDomainBase}/webhooks/incoming-call-status-change`,
+  });
+
+  await setState({
+    status: "Configured Phone Pool",
+    phonePoolStatus: SS.done,
+  });
 }
 
 /****************************************************
@@ -426,8 +486,6 @@ async function render() {
 
   console.log("\n");
 
-  if (state.urls) for (const url of state.urls) console.log(url);
-
   for (const status of state.statusHistory) console.log(status);
   console.log("\n");
 }
@@ -438,6 +496,9 @@ async function setState(update = {}) {
 
   // update env file
   let env = {};
+  if (update.accountSid) env["ACCOUNT_SID"] = update.accountSid;
+  if (update.authToken) env["AUTH_TOKEN"] = update.authToken;
+
   if (update.apiKey) env["TWILIO_API_KEY"] = update.apiKey;
   if (update.apiSecret) env["TWILIO_API_SECRET"] = update.apiSecret;
   if (update.syncSvcSid) env["SYNC_SERVICE_SID"] = update.syncSvcSid;
