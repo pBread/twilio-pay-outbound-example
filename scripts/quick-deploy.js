@@ -2,9 +2,6 @@
  Quick Deploy Script
 
 ****************************************************/
-const {
-  IncomingPhoneNumberInstance,
-} = require("twilio/lib/rest/api/v2010/account/incomingPhoneNumber");
 const util = require("./util");
 require("dotenv").config();
 
@@ -31,6 +28,18 @@ function makePhonePool() {
   return [];
 }
 
+const statuses = {
+  notStarted: "Not Started",
+  working: "Working",
+  done: "Done",
+  failed: "Failed",
+
+  created: "Service Created",
+
+  procuring: "Procuring",
+  procured: "Procured",
+};
+
 let state = {
   accountSid: ACCOUNT_SID,
   authToken: AUTH_TOKEN,
@@ -44,19 +53,37 @@ let state = {
 
   payPhone: TWILIO_PAY_PHONE,
   phonePool: makePhonePool(),
+
+  apiKeyStatus: TWILIO_API_KEY ? statuses.done : statuses.notStarted,
+  apiSecretStatus: TWILIO_API_SECRET ? statuses.done : statuses.notStarted,
+  syncSvcSidStatus: SYNC_SERVICE_SID ? statuses.created : statuses.notStarted,
+  payPhoneStatus: TWILIO_PAY_PHONE ? statuses.procured : statuses.notStarted,
+  phonePoolStatus: makePhonePool()?.length
+    ? statuses.statuses.procured
+    : statuses.notStarted,
 };
 
 const setState = async (update = {}) => {
   state = { ...state, ...update };
 
   let env = {};
-  if (update.apiKey) env["TWILIO_API_KEY"] = update.apiKey;
-  if (update.apiSecret) env["TWILIO_API_SECRET"] = update.apiSecret;
-  if (update.syncSvcSid) env["SYNC_SERVICE_SID"] = update.syncSvcSid;
-  if (update.payPhone) env["TWILIO_PAY_PHONE"] = update.payPhone;
-  if (update.phonePool)
+  if (update.apiKey) {
+    env["TWILIO_API_KEY"] = update.apiKey;
+    state.apiKeyStatus = statuses.done;
+  }
+  if (update.apiSecret) {
+    env["TWILIO_API_SECRET"] = update.apiSecret;
+    state.apiKeyStatus = statuses.done;
+  }
+  if (update.syncSvcSid) {
+    env["SYNC_SERVICE_SID"] = update.syncSvcSid;
+  }
+  if (update.payPhone) {
+    env["TWILIO_PAY_PHONE"] = update.payPhone;
+  }
+  if (update.phonePool) {
     env["TWILIO_PHONE_POOL"] = JSON.stringify(update.phonePool);
-
+  }
   if (Object.keys(env).length) util.updateEnvFile(env);
 
   await render();
@@ -65,19 +92,19 @@ const setState = async (update = {}) => {
 const client = require("twilio")(ACCOUNT_SID, AUTH_TOKEN);
 
 (async () => {
-  await manageAccount();
+  if (!ACCOUNT_SID || !AUTH_TOKEN)
+    throw Error(
+      `Missing required env variables: ACCOUNT_SID and/or AUTH_TOKEN`
+    );
+
+  await getAccount();
   await manageApiKey();
   await manageSyncService();
   await setupSyncService();
   await procurePhones();
 })();
 
-async function manageAccount() {
-  if (!ACCOUNT_SID || !AUTH_TOKEN)
-    throw Error(
-      `Missing required env variables: ACCOUNT_SID and/or AUTH_TOKEN`
-    );
-
+async function getAccount() {
   try {
     const account = await client.api.v2010.accounts(ACCOUNT_SID).fetch();
     await setState({ account });
@@ -91,6 +118,10 @@ async function manageAccount() {
 
 async function manageApiKey() {
   if (state.apiKey && state.apiSecret) return;
+  setState({
+    apiKeyStatus: statuses.working,
+    apiSecretStatus: statuses.working,
+  });
 
   try {
     const apiKeyResult = await client.newKeys.create({
@@ -103,6 +134,10 @@ async function manageApiKey() {
     setState({ apiKey, apiSecret });
   } catch (error) {
     console.error("Unable to create API Key");
+    setState({
+      apiKeyStatus: statuses.failed,
+      apiSecretStatus: statuses.failed,
+    });
     throw error;
   }
 }
@@ -110,19 +145,22 @@ async function manageApiKey() {
 async function manageSyncService() {
   if (state.syncSvcSid) return;
 
+  setState({ syncSvcSidStatus: statuses.working });
   try {
     const syncSvc = await client.sync.services.create({
       friendlyName: "twilio-pay-sync-service",
     });
-    setState({ syncSvcSid: syncSvc.sid });
+    setState({ syncSvcSid: syncSvc.sid, syncSvcSidStatus: "Service Created" });
   } catch (error) {
+    setState({ syncSvcSidStatus: statuses.failed });
+
     console.error("Unable to create Sync Service");
     throw error;
   }
 }
 
 async function setupSyncService() {
-  console.log("checking if reservations SyncMap exists");
+  setState({ syncSvcSidStatus: "Configuring" });
 
   const curSyncMap = await client.sync.v1
     .services(state.syncSvcSid)
@@ -132,7 +170,6 @@ async function setupSyncService() {
 
   if (curSyncMap) return console.log("reservations SyncMap already exists");
 
-  console.log("creating a SyncMap to track phone reservations....");
   try {
     await client.sync.v1
       .services(state.syncSvcSid)
@@ -178,27 +215,13 @@ async function render() {
     ["Account SID", state.accountSid],
     ["Account Name", state.account?.friendlyName],
     "separator",
-    ["Has API Key", !!state.apiKey && !!state.apiSecret],
+    ["API Key Status", state.apiKeyStatus],
+    ["API Secret Status", state.apiSecretStatus],
     "blank",
+    ["Sync Status", state.syncSvcSidStatus],
     ["Sync Service SID", state.syncSvcSid],
+    "blank",
   ]);
-
-  const warnings = [];
-
-  if (state.warnApiKey)
-    warnings.push(
-      `You will need to create a Twilio API Key and add the TWILIO_API_KEY & TWILIO_API_SECRET to environment variables to your Twilio Function. See https://www.twilio.com/docs/iam/api-keys#create-an-api-key`
-    );
-  if (state.warnSyncSvc)
-    warnings.push(
-      `You will need to create a Sync Service and add the SYNC_SERVICE_SID to the Function's env variables`
-    );
-
-  for (let i = 0; i < warnings.length; i++) {
-    if (i === 0) console.log("\n\nMessages:");
-    const warning = `(${i + 1})  ` + warnings[i];
-    console.log(warning);
-  }
 
   console.log("\n\n");
 }
