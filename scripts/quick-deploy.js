@@ -93,12 +93,8 @@ async function render() {
 
 async function setState(update = {}) {
   state = { ...state, ...update };
-  updateEnvFile(update);
 
-  await render();
-}
-
-async function updateEnvFile(update) {
+  // update env file
   let env = {};
   if (update.apiKey) env["TWILIO_API_KEY"] = update.apiKey;
   if (update.apiSecret) env["TWILIO.API_SECRET"] = update.apiSecret;
@@ -108,4 +104,7 @@ async function updateEnvFile(update) {
     env["TWILIO_PHONE_POOL"] = JSON.stringify(update.phonePool);
 
   if (Object.keys(env).length) return util.updateEnvFile(env);
+
+  // print to console
+  await render();
 }
