@@ -84,6 +84,14 @@ async function createSubaccount() {
 
   client = require("twilio")(subaccount.sid, subaccount.authToken);
 
+  fs.appendFileSync(
+    path.join(__dirname, "../", ".local.subaccounts"),
+    subaccount.sid,
+    (err) => {
+      if (err) console.error(err);
+    }
+  );
+
   await setState({
     state: "Created subaccount",
     accountSid: subaccount.sid,
