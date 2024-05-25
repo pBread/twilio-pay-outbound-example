@@ -5,7 +5,8 @@
   "scripts": {
     "deploy": "twilio-run deploy",
     "dev": "twilio-run",
-    "quick-deploy": "node scripts/quick-deploy.js"
+    "quick-deploy": "node scripts/quick-deploy.js",
+    "q": "yarn quick-deploy"
   },
   "dependencies": {
     "@twilio/runtime-handler": "2.0.0",
