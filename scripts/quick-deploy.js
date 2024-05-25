@@ -47,7 +47,7 @@ let state = {
 };
 
 (async () => {
-  // await createSubaccount();
+  await createSubaccount();
 
   // start process
   await initPhonePool();
