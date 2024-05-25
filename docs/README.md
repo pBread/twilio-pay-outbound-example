@@ -11,9 +11,10 @@ _NOTE: The payment method collection flow is not fully built out. After providin
 ```bash
 git clone https://github.com/pBread/twilio-pay-outbound-example.git
 cd twilio-pay-outbound-example
+cp .env.local .env
 
 # this project requires node version 18
-# see nvm below for installation instructions
+# see below for installation instructions
 nvm install 18
 nvm use 18
 
@@ -52,10 +53,6 @@ Other than that, the script will always perform the following:
 #### Existing Pay Connector
 
 If you already have a Pay Connector and it is not named "Default", you will need to update the [Function's env variable](https://www.twilio.com/docs/serverless/functions-assets/functions/variables) `PAY_CONNECTOR_NAME` to the Pay Connector's Unique Name. See [Setting Environment Variables](https://www.twilio.com/docs/serverless/functions-assets/functions/variables#setting-environment-variables).
-
-Furthermore, you will need to
-
-NOTE: Generic Pay Connectors cannot be modified after being approved. You will
 
 #### New Pay Connector
 
